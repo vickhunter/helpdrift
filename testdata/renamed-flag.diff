@@ -1,0 +1,12 @@
+diff -ru before/cmd/acme/main.go after/cmd/acme/main.go
+--- before/cmd/acme/main.go	2026-10-04 17:04:43.902506690 +0200
++++ after/cmd/acme/main.go	2026-10-04 17:04:43.902506690 +0200
+@@ -6,7 +6,7 @@
+ )
+ 
+ func main() {
+-	output := flag.String("output", "report.csv", "where to write the export")
++	output := flag.String("out-file", "report.csv", "where to write the export")
+ 	verbose := flag.Bool("verbose", false, "print progress while exporting")
+ 	flag.Parse()
+ 	fmt.Println(*output, *verbose)
