@@ -1,0 +1,17 @@
+# Example .helpdrift.yml (place it in the repository root).
+# Doc files to check.
+docs: ["help/**/*.md", "docs/**/*.mdx"]
+
+# Code to compare against. Leave out to use every file that is not a doc.
+code:
+  - src/**
+  - locales/**
+
+# Never look at these (added to the built-in excludes such as node_modules).
+exclude: ["src/generated/**"]
+
+# Claims that should never be reported.
+ignore: ["Settings", "Dashboard"]
+
+# Minimum length of a claim, in characters.
+min_length: 3

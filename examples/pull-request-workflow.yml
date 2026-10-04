@@ -1,0 +1,42 @@
+# Example: copy to .github/workflows/helpdrift.yml in your repository.
+# Runs helpdrift on every pull request and posts (or updates) one comment
+# listing doc claims the PR made stale. The comment is posted by this
+# workflow with its own GITHUB_TOKEN; helpdrift itself never talks to GitHub.
+name: helpdrift
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  docs-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # helpdrift needs the base branch history
+
+      - id: helpdrift
+        uses: vickhunter/helpdrift@main # pin to a tag or SHA once releases exist
+        with:
+          docs: "help/**/*.md,docs/**/*.mdx"
+          fail-on-findings: "false"
+
+      - name: Comment on the pull request
+        if: steps.helpdrift.outputs.findings != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPORT: ${{ steps.helpdrift.outputs.report }}
+        run: |
+          gh pr comment "$PR" --edit-last --body-file "$REPORT" \
+            || gh pr comment "$PR" --body-file "$REPORT"
+
+      - name: Fail when docs are stale
+        if: steps.helpdrift.outputs.findings != '0'
+        run: |
+          echo "helpdrift found ${{ steps.helpdrift.outputs.findings }} stale doc claim(s)."
+          exit 1

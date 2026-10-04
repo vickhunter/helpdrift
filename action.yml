@@ -1,0 +1,84 @@
+name: helpdrift
+description: Flag Markdown/MDX docs that mention flags, env vars, URL paths, labels or prices a pull request removed or renamed.
+author: Victor Motricala
+branding:
+  icon: book-open
+  color: orange
+
+inputs:
+  base:
+    description: Git ref to compare against. Defaults to origin/<pull request base branch>.
+    required: false
+    default: ""
+  docs:
+    description: Comma-separated doc globs (default **/*.md,**/*.mdx, or the docs list in .helpdrift.yml).
+    required: false
+    default: ""
+  config:
+    description: Path to a helpdrift config file (default .helpdrift.yml when present).
+    required: false
+    default: ""
+  fail-on-findings:
+    description: Fail the step when there are findings ("true" or "false").
+    required: false
+    default: "true"
+  args:
+    description: Extra arguments passed to `helpdrift check`.
+    required: false
+    default: ""
+
+outputs:
+  findings:
+    description: Number of findings.
+    value: ${{ steps.run.outputs.findings }}
+  report:
+    description: Path to a Markdown report, suitable for a PR comment.
+    value: ${{ steps.run.outputs.report }}
+  json:
+    description: Path to the JSON report.
+    value: ${{ steps.run.outputs.json }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+
+    - name: Build helpdrift
+      shell: bash
+      run: cd "$GITHUB_ACTION_PATH" && go build -trimpath -o "$RUNNER_TEMP/helpdrift" ./cmd/helpdrift
+
+    - name: Run helpdrift
+      id: run
+      shell: bash
+      env:
+        HD_BASE: ${{ inputs.base }}
+        HD_DOCS: ${{ inputs.docs }}
+        HD_CONFIG: ${{ inputs.config }}
+        HD_FAIL: ${{ inputs.fail-on-findings }}
+        HD_ARGS: ${{ inputs.args }}
+      run: |
+        base="${HD_BASE:-origin/${GITHUB_BASE_REF:-main}}"
+        args=(check --base "$base" --head HEAD)
+        [ -n "$HD_DOCS" ] && args+=(--docs "$HD_DOCS")
+        [ -n "$HD_CONFIG" ] && args+=(--config "$HD_CONFIG")
+        [ "$HD_FAIL" = "true" ] && args+=(--fail-on-findings)
+        # shellcheck disable=SC2206
+        [ -n "$HD_ARGS" ] && args+=($HD_ARGS)
+        md="$RUNNER_TEMP/helpdrift-report.md"
+        js="$RUNNER_TEMP/helpdrift-report.json"
+        set +e
+        "$RUNNER_TEMP/helpdrift" "${args[@]}" --markdown-file "$md" --json-file "$js"
+        status=$?
+        set -e
+        count=0
+        [ -f "$js" ] && count=$(grep -c '"change":' "$js" || true)
+        {
+          echo "findings=$count"
+          echo "report=$md"
+          echo "json=$js"
+        } >> "$GITHUB_OUTPUT"
+        [ -f "$md" ] && cat "$md" >> "$GITHUB_STEP_SUMMARY"
+        exit $status
