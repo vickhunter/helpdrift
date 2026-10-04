@@ -97,10 +97,13 @@ func Summary(res *engine.Result) string {
 	head := fmt.Sprintf("%d %s in %d %s", len(res.Findings), plural(len(res.Findings), "finding", "findings"),
 		len(files), plural(len(files), "doc", "docs"))
 	if res.Mode == "scan" {
-		return fmt.Sprintf("helpdrift scan: %s (%d docs, %d anchors, %d code files)", head, s.Docs, s.Anchors, s.CodeFiles)
+		return fmt.Sprintf("helpdrift scan: %s (%d %s, %d %s, %d code %s)", head,
+			s.Docs, plural(s.Docs, "doc", "docs"), s.Anchors, plural(s.Anchors, "anchor", "anchors"),
+			s.CodeFiles, plural(s.CodeFiles, "file", "files"))
 	}
-	return fmt.Sprintf("helpdrift check: %s (%d docs, %d anchors checked against %d changed code %s)",
-		head, s.Docs, s.Anchors, s.ChangedFiles, plural(s.ChangedFiles, "file", "files"))
+	return fmt.Sprintf("helpdrift check: %s (%d %s, %d %s checked against %d changed code %s)", head,
+		s.Docs, plural(s.Docs, "doc", "docs"), s.Anchors, plural(s.Anchors, "anchor", "anchors"),
+		s.ChangedFiles, plural(s.ChangedFiles, "file", "files"))
 }
 
 func plural(n int, one, many string) string {

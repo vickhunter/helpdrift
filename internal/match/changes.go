@@ -49,7 +49,7 @@ type ChangeSet struct {
 	Removed map[string][]Occurrence // token text -> where it was removed
 	Renames map[string][]Rename     // old token text -> replacements
 	Values  []ValueChange
-	Files   int // code files that contributed changes
+	Files   int // code files with at least one change
 
 	fold map[string][]string // lower(text) -> texts in Removed
 }
@@ -72,10 +72,10 @@ func Build(files []diff.File, include func(path string) bool) *ChangeSet {
 		oldOpt, newOpt := tokens.OptionsFor(oldPath), tokens.OptionsFor(newPath)
 		touched := false
 		for _, g := range f.Groups {
+			touched = true
 			if len(g.Removed) == 0 {
 				continue
 			}
-			touched = true
 			rem := make([][]tokens.Token, len(g.Removed))
 			for i, l := range g.Removed {
 				rem[i] = tokens.Line(l.Text, oldOpt)
