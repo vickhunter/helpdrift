@@ -109,6 +109,19 @@ func TestUsageErrors(t *testing.T) {
 	}
 }
 
+func TestDocsQuoteFormatExample(t *testing.T) {
+	root := filepath.Join("..", "..", "docs")
+	for _, name := range []string{"check.md", "formats.md"} {
+		b, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), formatMDExample) {
+			t.Errorf("%s does not quote %q", name, formatMDExample)
+		}
+	}
+}
+
 func TestLLMNeedsEnv(t *testing.T) {
 	t.Setenv("HELPDRIFT_LLM_BASE_URL", "")
 	t.Setenv("HELPDRIFT_LLM_MODEL", "")

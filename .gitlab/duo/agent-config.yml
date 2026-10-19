@@ -1,0 +1,13 @@
+# How Duo flows execute in CI/CD. GitLab reads this file from the default
+# branch only.
+# https://docs.gitlab.com/user/duo_agent_platform/flows/execution/agent-config-yaml/
+# https://docs.gitlab.com/user/duo_agent_platform/flows/execution/
+
+image: golang:1.22
+
+setup_script:
+  - sh scripts/ensure-git.sh
+  - go build -trimpath -o /tmp/helpdrift ./cmd/helpdrift
+
+network_policy:
+  include_recommended_allowed: true

@@ -1,0 +1,104 @@
+# docs-drift-fixer
+# Flow registry v1, restricted to what custom flows accept.
+# Schema: https://docs.gitlab.com/user/duo_agent_platform/flows/custom_flows_schema/
+# Fields: https://docs.gitlab.com/user/duo_agent_platform/flows/claude-edit-v1-flow-registry/
+# Triggers are not part of this file. Attach one in the GitLab UI.
+# https://docs.gitlab.com/user/duo_agent_platform/triggers/
+# https://docs.gitlab.com/user/duo_agent_platform/flows/custom/
+
+version: "v1"
+environment: ambient
+coding_environment: full
+
+components:
+  - name: docs_drift_fixer
+    type: AgentComponent
+    prompt_id: docs_drift_fixer_prompt
+    inputs:
+      - from: "context:goal"
+        as: goal
+      - from: "context:project_id"
+        as: project_id
+      - from: "context:inputs.agent_platform_standard_context.workload_branch"
+        as: workload_branch
+      - from: "context:inputs.agent_platform_standard_context.primary_branch"
+        as: primary_branch
+    toolset:
+      - read_file
+      - list_dir
+      - find_files
+      - grep
+      - edit_file
+      - create_file_with_contents
+      - create_commit
+      - create_merge_request_note
+      - get_merge_request
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+    ui_role_as: agent
+
+prompts:
+  - prompt_id: docs_drift_fixer_prompt
+    name: Docs drift fixer
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You fix help articles that a merge request made stale. You run
+        unattended. A human merges the merge request after you finish. Do not
+        merge it yourself.
+
+        helpdrift writes reports/helpdrift.json. Each finding has file, line,
+        anchor.text, suggestion, change, and sometimes replace.from and
+        replace.to.
+
+        Do this, in order:
+        1. Read reports/helpdrift.json if it is in the checkout. If it is
+           missing, build helpdrift with go build -o /tmp/helpdrift
+           ./cmd/helpdrift when /tmp/helpdrift is absent, then run a check
+           against the merge base of the primary branch and write
+           reports/helpdrift.json and a Markdown report.
+        2. If there are no findings, post one merge request note that says
+           helpdrift found nothing to update, then stop.
+        3. Edit only the Markdown files named by the findings. When
+           replace.from and replace.to are both present, replace that text.
+           Otherwise apply the suggestion only when it names the exact
+           replacement. Skip a finding rather than guess.
+        4. Commit only those Markdown files on the workload branch. The
+           commit message is: docs: update N claims (helpdrift)
+           N is the number of claims you changed. Use create_commit.
+        5. Post one merge request note with create_merge_request_note. Say
+           how many claims you changed, that the pipeline will re-run, and
+           that a human should merge when it is green.
+
+        When the note is posted, your final answer is that summary. No
+        further steps are needed after that.
+      user: |
+        Project ID: {{ project_id }}
+        Workload branch: {{ workload_branch }}
+        Primary branch: {{ primary_branch }}
+        Goal: {{ goal }}
+      placeholder: history
+    params:
+      timeout: 300
+
+routers:
+  - from: docs_drift_fixer
+    to: end
+
+flow:
+  entry_point: docs_drift_fixer
+  inputs:
+    - category: agent_platform_standard_context
+      input_schema:
+        primary_branch:
+          type: string
+          description: The default branch of the repository.
+        workload_branch:
+          type: string
+          description: Git ref used by the CI workload runner.
+        session_owner_id:
+          type: string
+          description: GitLab user ID of the person who triggered the flow.

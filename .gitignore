@@ -10,6 +10,14 @@ coverage.*
 
 # Reports produced by local runs
 helpdrift-report.*
+/reports/
+
+# GitLab Pages output
+/public/
+
+# Python
+__pycache__/
+*.pyc
 
 # Editors and OS files
 .idea/
