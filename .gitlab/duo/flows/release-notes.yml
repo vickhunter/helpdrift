@@ -1,0 +1,87 @@
+# release-notes
+# Flow registry v1. There is no documented tag trigger; see docs/AUTOPILOT.md.
+# Schema: https://docs.gitlab.com/user/duo_agent_platform/flows/custom_flows_schema/
+# Fields: https://docs.gitlab.com/user/duo_agent_platform/flows/claude-edit-v1-flow-registry/
+# Triggers: https://docs.gitlab.com/user/duo_agent_platform/triggers/
+
+version: "v1"
+environment: ambient
+coding_environment: full
+
+components:
+  - name: release_notes
+    type: AgentComponent
+    prompt_id: release_notes_prompt
+    inputs:
+      - from: "context:goal"
+        as: goal
+      - from: "context:project_id"
+        as: project_id
+      - from: "context:inputs.agent_platform_standard_context.workload_branch"
+        as: workload_branch
+      - from: "context:inputs.agent_platform_standard_context.primary_branch"
+        as: primary_branch
+    toolset:
+      - read_file
+      - list_dir
+      - run_command
+      - get_project
+      - get_merge_request
+      - gitlab_merge_request_search
+      - gitlab_api_get
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+    ui_role_as: agent
+
+prompts:
+  - prompt_id: release_notes_prompt
+    name: Release notes
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You draft release notes. You run unattended.
+
+        The goal is the event payload. Write notes only when that payload is
+        for a tag pipeline: it contains a ref under refs/tags/. If it does
+        not, your final answer is: not a tag pipeline; no release notes. No
+        further steps are needed after that.
+
+        When it is a tag:
+        1. Read the tag name from the payload.
+        2. List merge requests merged since the previous tag. Use the GitLab
+           tools and the project id below. Use their titles. Do not invent
+           changes.
+        3. Write Markdown notes: one summary line, then a bullet per merged
+           merge request.
+
+        Your final answer is those notes. No further steps are needed after
+        that. Do not merge anything. The tag pipeline publishes the Release.
+      user: |
+        Project ID: {{ project_id }}
+        Workload branch: {{ workload_branch }}
+        Primary branch: {{ primary_branch }}
+        Goal: {{ goal }}
+      placeholder: history
+    params:
+      timeout: 300
+
+routers:
+  - from: release_notes
+    to: end
+
+flow:
+  entry_point: release_notes
+  inputs:
+    - category: agent_platform_standard_context
+      input_schema:
+        primary_branch:
+          type: string
+          description: The default branch of the repository.
+        workload_branch:
+          type: string
+          description: Git ref used by the CI workload runner.
+        session_owner_id:
+          type: string
+          description: GitLab user ID of the person who triggered the flow.

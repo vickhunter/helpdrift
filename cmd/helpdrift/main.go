@@ -22,6 +22,11 @@ import (
 
 var version = "dev"
 
+// formatMDExample is the Markdown report command the docs site quotes.
+// scripts/demo-rename.sh rewrites this literal in Go source and leaves docs/ alone,
+// which is the drift the GitLab demo merge request is meant to catch.
+const formatMDExample = "helpdrift check --format md"
+
 // Exit codes.
 const (
 	exitOK       = 0
@@ -94,7 +99,7 @@ func runCheck(mode string, args []string, stdin io.Reader, stdout, stderr io.Wri
 		cfgPath                            = fs.String("config", "", "config file (default: .helpdrift.yml in --root, if present)")
 		base, head, diffFile               string
 		strip                              int
-		format                             = fs.String("format", "text", "output format: text, json or markdown")
+		format                             = fs.String("format", "text", "output format: text, json or markdown ("+formatMDExample+")")
 		output                             = fs.String("output", "", "write the report to this file instead of stdout")
 		mdFile                             = fs.String("markdown-file", "", "also write a Markdown report to this file")
 		jsonFile                           = fs.String("json-file", "", "also write a JSON report to this file")

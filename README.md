@@ -158,6 +158,34 @@ helpdrift never calls the GitHub API. To get a PR comment, post the report from
 your own workflow with its `GITHUB_TOKEN`. A complete example is in
 [`examples/pull-request-workflow.yml`](examples/pull-request-workflow.yml).
 
+## GitLab Autopilot
+
+This branch adds a GitLab CI/CD pipeline and GitLab Duo Agent Platform flows
+around the CLI. The commits on `main` through 4 Oct 2026 are the original MIT
+project and are not rewritten. Operator notes, stage list, and the steps that
+wait on a GitLab project are in [docs/AUTOPILOT.md](docs/AUTOPILOT.md).
+
+| | Manual | Autopilot |
+|---|---|---|
+| When a renamed flag lands | A writer notices after a reader complains, then edits the article by hand | `docs-drift` fails the merge request, the docs-drift-fixer flow edits the articles and commits to the branch, and a person merges |
+| Release notes | Someone writes them at tag time | The release job publishes notes from merged history; the release-notes flow drafts a set when a tag pipeline trigger is attached |
+| Docs site | A separate deploy | The `pages` job publishes `docs/` |
+
+Stages, in order: `test`, `docs-drift`, `secure` (SAST and secret detection), `package`, `release`, `pages`. A scheduled `helpdrift scan` job is the monitor stretch.
+
+To see the drift locally:
+
+```sh
+make build
+scripts/demo-rename.sh
+./bin/helpdrift check --base HEAD --docs 'docs/**/*.md' --fail-on-findings
+git checkout -- cmd/helpdrift/main.go
+```
+
+`scripts/demo-rename.sh` changes Go source only. Restore the file before committing; the articles are supposed to keep the old command until the fixer runs.
+
+Added on or after 5 Oct 2026: the Duo flows, `.gitlab-ci.yml`, the docs site, and the demo script. The detection engine and reports were already on `main`.
+
 ## Optional LLM review
 
 Off by default and never needed. With `--llm`, each finding (up to
