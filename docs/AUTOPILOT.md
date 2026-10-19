@@ -126,12 +126,12 @@ Not in this branch: an issue-triage flow for the `docs-drift` label, and a prote
 
 ## Verification recorded with this branch
 
-Commands and results are filled in when this branch is validated. Re-run them after editing the pipeline or the demo articles.
+Checked on this branch before it was pushed. Re-run after editing the pipeline or the demo articles.
 
-```sh
-yamllint .gitlab-ci.yml .gitlab/duo/agent-config.yml .gitlab/duo/flows/docs-drift-fixer.yml .gitlab/duo/flows/release-notes.yml
-go test ./...
-scripts/demo-rename.sh
-./bin/helpdrift check --base HEAD --docs 'docs/**/*.md' --format json --fail-on-findings
-git checkout -- cmd/helpdrift/main.go
-```
+- `yamllint` 1.38.0, with line length, document start, and truthy rules disabled: `.gitlab-ci.yml`, `.gitlab/duo/agent-config.yml`, and both flow files are clean.
+- `check-jsonschema` against the GitLab CI schema at `https://gitlab.com/gitlab-org/gitlab/-/raw/master/app/assets/javascripts/editor/schema/ci.json`: `.gitlab-ci.yml` validates. The Duo flow files have no published JSON schema; they were yamllint-clean and written from the v1 pages linked above.
+- `make check` (`gofmt`, `go vet`, `go test ./...`) passes.
+- `scripts/package-binaries.sh` builds `helpdrift-linux-amd64`, `helpdrift-linux-arm64`, `helpdrift-darwin-amd64`, `helpdrift-darwin-arm64`, and `helpdrift-windows-amd64.exe`. Upload runs only when `CI_JOB_TOKEN` is set.
+- `scripts/build_pages.py` writes `public/check.html` with the Markdown format command.
+- Before `scripts/demo-rename.sh`, `helpdrift check --base HEAD --docs 'docs/**/*.md' --fail-on-findings` exits 0 with 0 findings.
+- After the script, the same command exits 1 with 2 findings: `docs/check.md:7` and `docs/formats.md:7`, each renamed to the long format name. The Go file was restored afterwards and is not part of the drift.
